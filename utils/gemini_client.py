@@ -21,7 +21,7 @@ class GeminiClient:
             vertexai.init(project=self.project, location=self.location)
             self.embedding_model = TextEmbeddingModel.from_pretrained(
                 "text-embedding-004")
-            self.chat_model = GenerativeModel("gemini-1.5-pro")
+            self.chat_model = GenerativeModel("gemini-1.5-flash")
         except Exception as e:
             logger.error(f"Failed to initialize Vertex AI: {e}")
             self.embedding_model = None
@@ -98,11 +98,23 @@ class GeminiClient:
                 safety_settings=safety_settings
             )
 
-            # Token counting is available via usage_metadata
-            input_tokens = response.usage_metadata.prompt_token_count if hasattr(
-                response, "usage_metadata") else 0
-            output_tokens = response.usage_metadata.candidates_token_count if hasattr(
-                response, "usage_metadata") else 0
+            # Token counting using count_tokens
+            try:
+                input_tokens_response = self.chat_model.count_tokens(contents)
+                input_tokens = input_tokens_response.total_tokens
+            except Exception as e:
+                logger.error(f"Failed to count input tokens: {e}")
+                input_tokens = response.usage_metadata.prompt_token_count if hasattr(
+                    response, "usage_metadata") else 0
+
+            try:
+                output_tokens_response = self.chat_model.count_tokens(
+                    response.text)
+                output_tokens = output_tokens_response.total_tokens
+            except Exception as e:
+                logger.error(f"Failed to count output tokens: {e}")
+                output_tokens = response.usage_metadata.candidates_token_count if hasattr(
+                    response, "usage_metadata") else 0
 
             return {
                 "response_text": response.text,

@@ -60,9 +60,23 @@ if "total_input_tokens" not in st.session_state:
 if "total_output_tokens" not in st.session_state:
     st.session_state.total_output_tokens = 0
 
+
+# Cost tracking
+INPUT_COST_PER_M = 0.075
+OUTPUT_COST_PER_M = 0.30
+
+if "session_cost" not in st.session_state:
+    st.session_state.session_cost = 0.0
+
+if "latest_message_cost" not in st.session_state:
+    st.session_state.latest_message_cost = 0.0
+
 st.sidebar.header("Usage Stats")
 st.sidebar.text(f"Input Tokens: {st.session_state.total_input_tokens}")
 st.sidebar.text(f"Output Tokens: {st.session_state.total_output_tokens}")
+st.sidebar.text(f"Session Cost: ${st.session_state.session_cost:.6f}")
+st.sidebar.text(f"Latest Cost: ${st.session_state.latest_message_cost:.6f}")
+
 
 # Display buffer chat history
 buffer_history = buffer_mem.get_recent_messages(
@@ -131,10 +145,16 @@ if prompt := st.chat_input("What is up?"):
         # Update stats
         st.session_state.total_input_tokens += response_data["input_tokens"]
         st.session_state.total_output_tokens += response_data["output_tokens"]
-        st.sidebar.text(
-            f"Latest In: {
-                response_data['input_tokens']} | Out: {
-                response_data['output_tokens']}")
+
+        # Calculate cost
+        in_cost = (response_data["input_tokens"] /
+                   1_000_000) * INPUT_COST_PER_M
+        out_cost = (response_data["output_tokens"] /
+                    1_000_000) * OUTPUT_COST_PER_M
+        msg_cost = in_cost + out_cost
+
+        st.session_state.latest_message_cost = msg_cost
+        st.session_state.session_cost += msg_cost
 
         # 6. Save to DB
         # Save user message

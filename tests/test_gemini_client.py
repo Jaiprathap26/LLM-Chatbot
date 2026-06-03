@@ -59,6 +59,13 @@ def test_generate_chat_response(
     mock_response.usage_metadata.candidates_token_count = 5
     mock_chat_instance.generate_content.return_value = mock_response
 
+    mock_count_response1 = MagicMock()
+    mock_count_response1.total_tokens = 10
+    mock_count_response2 = MagicMock()
+    mock_count_response2.total_tokens = 5
+
+    mock_chat_instance.count_tokens.side_effect = [mock_count_response1, mock_count_response2]
+
     client = GeminiClient()
 
     buffer = [{"role": "user", "content": "hello"}]
